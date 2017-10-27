@@ -1,43 +1,27 @@
 #!/usr/bin/env node
 'use strict'
 
-var fs = require('fs')
-var path = require('path')
-
-var argv = require('minimist')(process.argv.slice(2))
-
-if (typeof argv.t === 'undefined'
-	|| typeof argv.d === 'undefined')
-	throw('-t or -d missing')
-
-const template = argv.t
-const data = argv.d // directory
-const html = fs.readFileSync(template, 'utf8')
-
+const fs = require('fs')
+const path = require('path')
 const cheerio = require('cheerio')
+
+var argv = process.argv.slice(2)
+const template = argv.shift()
+const source_dir = argv.shift()
+
+const html = fs.readFileSync(template, 'utf8')
 const $ = cheerio.load(html)
 
-// Collect elements with data-fill attribute
-var elements = $('[data-fill]')
-var empties = {}
+const ext = '.html'
+
+const query = '[data-fill]'
+var elements = $(query)
+
 for (var i = 0; i < elements.length; i++) {
-	empties[$(elements[i]).data('fill')] = elements[i]
+	var piece_name = $(elements[i]).data('fill')
+	var file = path.join(source_dir, piece_name + ext)
+	var piece = fs.readFileSync(file).toString()
+	$(elements[i]).append(piece)
 }
 
-// Read data files and fill in corresponding elements
-fs.readdir(data, function(error, files) {
-	if (error) throw(error)
-
-	// Only process .html files
-	files = files.filter(function(file) {
-		return file.match(/.html$/) !== null
-	})
-
-	files.forEach(function(file) {
-		var id = file.replace(/.html$/, '') // = data-fill
-		var piece = fs.readFileSync(path.join(data, file), 'utf8')
-		if (empties.hasOwnProperty(id))
-			$(empties[id]).append(piece)
-	})
-	console.log($.html())
-})
+console.log($.html())
