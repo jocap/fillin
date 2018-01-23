@@ -8,20 +8,38 @@ const cheerio = require('cheerio')
 var argv = process.argv.slice(2)
 const template = argv.shift()
 const source_dir = argv.shift()
+if (argv.length > 0)
+	var default_dir = argv.shift()
 
 const html = fs.readFileSync(template, 'utf8')
 const $ = cheerio.load(html)
 
 const ext = '.html'
-
 const query = '[data-fill]'
-var elements = $(query)
 
-for (var i = 0; i < elements.length; i++) {
-	var piece_name = $(elements[i]).data('fill')
-	var file = path.join(source_dir, piece_name + ext)
-	var piece = fs.readFileSync(file).toString()
-	$(elements[i]).append(piece)
+function fill(dom) {
+	var elements = dom(query)
+
+	for (var i = 0; i < elements.length; i++) {
+		var piece_name = $(elements[i]).data('fill')
+		var piece_names = piece_name.split(';')
+
+		for (var j = 0; j < piece_names.length; j++) {
+			var name = piece_names[j]
+
+			var file = path.join(source_dir, name + ext)
+			if (!fs.existsSync(file) && typeof default_dir !== 'undefined')
+				file = path.join(default_dir, name + ext)
+
+			if (fs.existsSync(file)) {
+				var piece = fs.readFileSync(file).toString()
+				var $piece = cheerio.load(piece)
+				fill($piece)
+				$(elements[i]).append($piece.html())
+			} else console.error('%s not found', file)
+		}
+	}
 }
 
+fill($)
 console.log($.html())

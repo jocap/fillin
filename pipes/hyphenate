@@ -1,0 +1,16 @@
+#!/usr/bin/env node
+'use strict'
+
+var fs = require('fs')
+
+var Hypher = require('hypher')
+var lang = 'sv'
+var h_lang = require('hyphenation.' + lang)
+var h = new Hypher(h_lang)
+
+module.exports = function(dom, textNodes) {
+	for (var i = 0; i < textNodes.length; i++) {
+		textNodes[i].nodeValue = h.hyphenateText(textNodes[i].nodeValue)
+	}
+	return [dom, textNodes]
+}
